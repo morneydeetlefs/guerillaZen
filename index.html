@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🪴 Zen Garden - Guerrilla Calm</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #0d1108;
+      color: #aaff00;
+      font-family: monospace;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    h1 {
+      margin: 0.4em 0 0.2em;
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      text-shadow: 0 0 10px #aaff00;
+    }
+    #instructions {
+      margin: 0.3em 0 1em;
+      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+      opacity: 0.85;
+      text-align: center;
+    }
+    #canvas-wrapper {
+      width: 100%;
+      max-width: 90vmin;
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+      position: relative;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border: 3px solid #8B4513;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(139,69,19,0.4);
+      touch-action: none;
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="%23aaff00" stroke-width="4"/><line x1="8" y1="8" x2="24" y2="24" stroke="%23aaff00" stroke-width="6"/></svg>') 16 16, auto;
+    }
+    #ui {
+      width: 90%;
+      max-width: 600px;
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1em;
+      font-size: clamp(1.1rem, 4vw, 1.4rem);
+    }
+    #score { text-shadow: 0 0 6px #aaff00; }
+    #pause-btn {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(139,69,19,0.3);
+      border: 3px solid #8B4513;
+      color: #aaff00;
+      font-size: 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      cursor: pointer;
+    }
+    #reset-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 8px 16px;
+      background: rgba(139,69,19,0.4);
+      border: 2px solid #8B4513;
+      color: #aaff00;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 20;
+    }
+    #game-over, #start-screen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85);
+      padding: 2em 3em;
+      border: 3px solid #8B4513;
+      border-radius: 12px;
+      text-align: center;
+      display: none;
+      z-index: 100;
+      width: 85%;
+      max-width: 420px;
+    }
+    #version {
+      position: fixed;
+      bottom: 10px;
+      right: 14px;
+      font-size: 0.78rem;
+      color: #555;
+      opacity: 0.65;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>🪴 Zen Garden</h1>
+    <p id="instructions">Drag to rake patterns<br>Relax & create calm</p>
+    <div id="canvas-wrapper">
+      <canvas id="garden"></canvas>
+    </div>
+    <div id="ui">
+      <div id="score">Time: <span id="time">0</span>s</div>
+    </div>
+    <button id="pause-btn">⏸️</button>
+    <button id="reset-btn">Reset Garden</button>
+  </div>
+
+  <div id="start-screen">
+    <h2>Welcome to Zen Garden</h2>
+    <p>Drag your finger or mouse to rake the sand.<br>Find your calm in the chaos of the city.</p>
+    <p>Tap anywhere or press any key to begin</p>
+  </div>
+
+  <div id="game-over">
+    <h2>Garden Complete</h2>
+    <p>You raked for <span id="final-time">0</span> seconds</p>
+    <p>Tap / Click to start a new garden</p>
+  </div>
+
+  <div id="version">v1.0 – Zen Mode</div>
+
+  <script>
+    const canvas = document.getElementById('garden');
+    const ctx = canvas.getContext('2d');
+    const timeEl = document.getElementById('time');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over');
+    const finalTimeEl = document.getElementById('final-time');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    let width, height, cellSize;
+    let sand = [];
+    let rakePath = [];
+    let isDrawing = false;
+    let startTime = 0;
+    let pausedTime = 0;
+    let paused = false;
+    let gameRunning = false;
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Init & Resize
+    // ────────────────────────────────────────────────────────────────────────
+    function resize() {
+      const wrapper = document.getElementById('canvas-wrapper');
+      width = wrapper.clientWidth;
+      height = wrapper.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+      cellSize = Math.min(width, height) / 40;
+
+      initSand();
+      drawGarden();
+    }
+
+    window.addEventListener('resize', resize);
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Sand Grid (for ripple / texture effect)
+    // ────────────────────────────────────────────────────────────────────────
+    function initSand() {
+      sand = [];
+      const cols = Math.floor(width / cellSize) + 1;
+      const rows = Math.floor(height / cellSize) + 1;
+      for (let y = 0; y < rows; y++) {
+        sand[y] = [];
+        for (let x = 0; x < cols; x++) {
+          sand[y][x] = { ripple: 0, rippleTime: 0 };
+        }
+      }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Draw Garden (sand + rake lines + decor)
+    // ────────────────────────────────────────────────────────────────────────
+    function drawGarden() {
+      // Sand base
+      ctx.fillStyle = '#f5e8c7';
+      ctx.fillRect(0, 0, width, height);
+
+      // Sand texture / ripples
+      ctx.strokeStyle = 'rgba(210,180,140,0.3)';
+      ctx.lineWidth = cellSize * 0.4;
+      for (let y = 0; y < sand.length; y++) {
+        for (let x = 0; x < sand[y].length; x++) {
+          const s = sand[y][x];
+          if (s.ripple > 0) {
+            const alpha = s.ripple * 0.6;
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 1.5, 0, Math.PI * 2);
+            ctx.stroke();
+            s.ripple -= 0.02;
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      // Rake lines
+      ctx.strokeStyle = '#d2b48c';
+      ctx.lineWidth = cellSize * 0.8;
+      ctx.lineCap = 'round';
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      rakePath.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Decor: rocks & plants
+      drawDecor();
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Decor Elements (rocks, mini plants)
+    // ────────────────────────────────────────────────────────────────────────
+    const decor = [];
+    function placeDecor() {
+      decor.length = 0;
+      // 4-7 rocks
+      for (let i = 0; i < 5 + Math.floor(Math.random() * 3); i++) {
+        decor.push({
+          type: 'rock',
+          x: Math.random() * width * 0.8 + width * 0.1,
+          y: Math.random() * height * 0.8 + height * 0.1,
+          size: 20 + Math.random() * 30
+        });
+      }
+      // 3-5 plants
+      for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
+        decor.push({
+          type: 'plant',
+          x: Math.random() * width * 0.8 + width * 0.1,
+          y: Math.random() * height * 0.8 + height * 0.1,
+          size: 15 + Math.random() * 25
+        });
+      }
+    }
+
+    function drawDecor() {
+      decor.forEach(d => {
+        if (d.type === 'rock') {
+          ctx.fillStyle = '#555';
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#000';
+          ctx.fillStyle = '#444';
+          ctx.beginPath();
+          ctx.arc(d.x - d.size*0.2, d.y - d.size*0.2, d.size*0.6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else if (d.type === 'plant') {
+          ctx.fillStyle = '#228B22';
+          ctx.beginPath();
+          ctx.moveTo(d.x, d.y);
+          ctx.lineTo(d.x - d.size*0.3, d.y - d.size*1.2);
+          ctx.lineTo(d.x + d.size*0.3, d.y - d.size*1.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#32CD32';
+          ctx.beginPath();
+          ctx.arc(d.x, d.y - d.size*1.4, d.size*0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Input (rake drawing)
+    // ────────────────────────────────────────────────────────────────────────
+    function startRake(e) {
+      e.preventDefault();
+      isDrawing = true;
+      const pos = getPos(e);
+      rakePath = [{ x: pos.x, y: pos.y }];
+      addRipple(pos.x, pos.y);
+    }
+
+    function moveRake(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      rakePath.push({ x: pos.x, y: pos.y });
+      addRipple(pos.x, pos.y);
+      drawGarden();
+    }
+
+    function endRake() {
+      isDrawing = false;
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function addRipple(x, y) {
+      const col = Math.floor(x / cellSize);
+      const row = Math.floor(y / cellSize);
+      if (sand[row] && sand[row][col]) {
+        sand[row][col].ripple = 1;
+        sand[row][col].rippleTime = performance.now();
+      }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Game Loop (time counter + ripple animation)
+    // ────────────────────────────────────────────────────────────────────────
+    let lastTime = 0;
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const delta = timestamp - lastTime;
+      lastTime = timestamp;
+
+      if (gameRunning && !paused) {
+        const elapsed = Math.floor((timestamp - startTime - pausedTime) / 1000);
+        timeEl.textContent = elapsed;
+      }
+
+      // Ripple decay
+      for (let y = 0; y < sand.length; y++) {
+        for (let x = 0; x < sand[y].length; x++) {
+          if (sand[y][x].ripple > 0) {
+            sand[y][x].ripple -= delta * 0.002;
+            if (sand[y][x].ripple < 0) sand[y][x].ripple = 0;
+          }
+        }
+      }
+
+      drawGarden();
+      requestAnimationFrame(loop);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Controls & Events
+    // ────────────────────────────────────────────────────────────────────────
+    canvas.addEventListener('mousedown', startRake);
+    canvas.addEventListener('mousemove', moveRake);
+    canvas.addEventListener('mouseup', endRake);
+    canvas.addEventListener('mouseleave', endRake);
+
+    canvas.addEventListener('touchstart', startRake);
+    canvas.addEventListener('touchmove', moveRake);
+    canvas.addEventListener('touchend', endRake);
+    canvas.addEventListener('touchcancel', endRake);
+
+    pauseBtn.addEventListener('click', () => {
+      paused = !paused;
+      if (paused) {
+        pausedTime += performance.now() - startTime;
+      } else {
+        startTime = performance.now() - pausedTime;
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      rakePath = [];
+      placeDecor();
+      drawGarden();
+      startTime = performance.now();
+      pausedTime = 0;
+      paused = false;
+    });
+
+    // Start on first interaction
+    document.addEventListener('click', () => {
+      if (!gameRunning) {
+        startTime = performance.now();
+        pausedTime = 0;
+        gameRunning = true;
+        placeDecor();
+        drawGarden();
+      }
+    }, { once: true });
+
+    // Kick off
+    resize();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
