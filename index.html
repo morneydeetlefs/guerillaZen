@@ -58,15 +58,28 @@
       max-width: 600px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
       margin-top: 1em;
       font-size: clamp(1.1rem, 4vw, 1.4rem);
     }
-    #score { text-shadow: 0 0 6px #aaff00; }
-    #pause-btn {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+    #rake-mode {
+      display: flex;
+      gap: 12px;
+    }
+    .mode-btn {
+      padding: 6px 14px;
+      background: rgba(139,69,19,0.4);
+      border: 2px solid #8B4513;
+      color: #aaff00;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .mode-btn.active {
+      background: rgba(139,69,19,0.8);
+      border-color: #aaff00;
+    }
+    #pause-btn, #reset-btn {
       width: 60px;
       height: 60px;
       border-radius: 50%;
@@ -77,36 +90,28 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 20;
-      cursor: pointer;
-    }
-    #reset-btn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      padding: 8px 16px;
-      background: rgba(139,69,19,0.4);
-      border: 2px solid #8B4513;
-      color: #aaff00;
-      font-size: 1rem;
-      border-radius: 8px;
       cursor: pointer;
       z-index: 20;
     }
-    #game-over, #start-screen {
+    #pause-btn { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
+    #reset-btn  { position: absolute; top: 20px; right: 20px; }
+
+    #message {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.75);
       padding: 2em 3em;
       border: 3px solid #8B4513;
       border-radius: 12px;
       text-align: center;
+      color: #aaff00;
+      font-size: clamp(1.6rem, 6vw, 2.8rem);
+      text-shadow: 0 0 12px #aaff00;
       display: none;
       z-index: 100;
-      width: 85%;
-      max-width: 420px;
+      pointer-events: none;
     }
     #version {
       position: fixed;
@@ -115,45 +120,36 @@
       font-size: 0.78rem;
       color: #555;
       opacity: 0.65;
-      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <div id="container">
     <h1>🪴 Zen Garden</h1>
-    <p id="instructions">Drag to rake patterns<br>Relax & create calm</p>
+    <p id="instructions">Drag to rake • Change style with buttons</p>
     <div id="canvas-wrapper">
       <canvas id="garden"></canvas>
+      <div id="message">Garden in Harmony 🌿</div>
     </div>
     <div id="ui">
       <div id="score">Time: <span id="time">0</span>s</div>
+      <div id="rake-mode">
+        <button class="mode-btn active" data-mode="straight">Straight</button>
+        <button class="mode-btn" data-mode="wavy">Wavy</button>
+        <button class="mode-btn" data-mode="circle">Circle</button>
+      </div>
     </div>
     <button id="pause-btn">⏸️</button>
-    <button id="reset-btn">Reset Garden</button>
+    <button id="reset-btn">Reset</button>
   </div>
 
-  <div id="start-screen">
-    <h2>Welcome to Zen Garden</h2>
-    <p>Drag your finger or mouse to rake the sand.<br>Find your calm in the chaos of the city.</p>
-    <p>Tap anywhere or press any key to begin</p>
-  </div>
-
-  <div id="game-over">
-    <h2>Garden Complete</h2>
-    <p>You raked for <span id="final-time">0</span> seconds</p>
-    <p>Tap / Click to start a new garden</p>
-  </div>
-
-  <div id="version">v1.0 – Zen Mode</div>
+  <div id="version">v1.1 – Wind & Modes</div>
 
   <script>
     const canvas = document.getElementById('garden');
     const ctx = canvas.getContext('2d');
     const timeEl = document.getElementById('time');
-    const startScreen = document.getElementById('start-screen');
-    const gameOverScreen = document.getElementById('game-over');
-    const finalTimeEl = document.getElementById('final-time');
+    const messageEl = document.getElementById('message');
     const pauseBtn = document.getElementById('pause-btn');
     const resetBtn = document.getElementById('reset-btn');
 
@@ -165,6 +161,9 @@
     let pausedTime = 0;
     let paused = false;
     let gameRunning = false;
+    let particles = [];
+
+    let currentMode = 'straight'; // straight | wavy | circle
 
     // ────────────────────────────────────────────────────────────────────────
     // Init & Resize
@@ -178,143 +177,138 @@
       cellSize = Math.min(width, height) / 40;
 
       initSand();
+      initParticles();
       drawGarden();
     }
 
     window.addEventListener('resize', resize);
 
-    // ────────────────────────────────────────────────────────────────────────
-    // Sand Grid (for ripple / texture effect)
-    // ────────────────────────────────────────────────────────────────────────
     function initSand() {
       sand = [];
-      const cols = Math.floor(width / cellSize) + 1;
-      const rows = Math.floor(height / cellSize) + 1;
+      const cols = Math.floor(width / cellSize) + 2;
+      const rows = Math.floor(height / cellSize) + 2;
       for (let y = 0; y < rows; y++) {
         sand[y] = [];
         for (let x = 0; x < cols; x++) {
-          sand[y][x] = { ripple: 0, rippleTime: 0 };
+          sand[y][x] = { ripple: 0 };
         }
       }
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Draw Garden (sand + rake lines + decor)
+    // Gentle wind + sand particles
+    // ────────────────────────────────────────────────────────────────────────
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < 60; i++) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size: 1 + Math.random() * 2.5,
+          speed: 0.2 + Math.random() * 0.6,
+          alpha: 0.3 + Math.random() * 0.4
+        });
+      }
+    }
+
+    function updateParticles(delta) {
+      particles.forEach(p => {
+        p.x += p.speed * delta * 0.06; // gentle rightward wind
+        if (p.x > width) {
+          p.x = -p.size * 2;
+          p.y = Math.random() * height;
+        }
+      });
+    }
+
+    function drawParticles() {
+      ctx.fillStyle = 'rgba(245,230,200,0.6)';
+      particles.forEach(p => {
+        ctx.globalAlpha = p.alpha;
+        ctx.fillRect(p.x, p.y, p.size, p.size * 0.2);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Draw Garden
     // ────────────────────────────────────────────────────────────────────────
     function drawGarden() {
-      // Sand base
+      // Base sand
       ctx.fillStyle = '#f5e8c7';
       ctx.fillRect(0, 0, width, height);
 
-      // Sand texture / ripples
-      ctx.strokeStyle = 'rgba(210,180,140,0.3)';
+      // Sand ripples
+      ctx.strokeStyle = 'rgba(210,180,140,0.25)';
       ctx.lineWidth = cellSize * 0.4;
       for (let y = 0; y < sand.length; y++) {
         for (let x = 0; x < sand[y].length; x++) {
           const s = sand[y][x];
           if (s.ripple > 0) {
-            const alpha = s.ripple * 0.6;
-            ctx.globalAlpha = alpha;
+            ctx.globalAlpha = s.ripple * 0.5;
             ctx.beginPath();
-            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 1.5, 0, Math.PI * 2);
+            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 1.8, 0, Math.PI * 2);
             ctx.stroke();
-            s.ripple -= 0.02;
+            s.ripple -= 0.015;
           }
         }
       }
       ctx.globalAlpha = 1;
 
       // Rake lines
-      ctx.strokeStyle = '#d2b48c';
-      ctx.lineWidth = cellSize * 0.8;
-      ctx.lineCap = 'round';
-      ctx.shadowBlur = 5;
-      ctx.shadowColor = 'rgba(0,0,0,0.3)';
-      ctx.beginPath();
-      rakePath.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      });
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+      if (rakePath.length > 1) {
+        ctx.strokeStyle = '#d2b48c';
+        ctx.lineWidth = cellSize * 0.9;
+        ctx.lineCap = 'round';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.beginPath();
 
-      // Decor: rocks & plants
-      drawDecor();
-    }
-
-    // ────────────────────────────────────────────────────────────────────────
-    // Decor Elements (rocks, mini plants)
-    // ────────────────────────────────────────────────────────────────────────
-    const decor = [];
-    function placeDecor() {
-      decor.length = 0;
-      // 4-7 rocks
-      for (let i = 0; i < 5 + Math.floor(Math.random() * 3); i++) {
-        decor.push({
-          type: 'rock',
-          x: Math.random() * width * 0.8 + width * 0.1,
-          y: Math.random() * height * 0.8 + height * 0.1,
-          size: 20 + Math.random() * 30
-        });
-      }
-      // 3-5 plants
-      for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
-        decor.push({
-          type: 'plant',
-          x: Math.random() * width * 0.8 + width * 0.1,
-          y: Math.random() * height * 0.8 + height * 0.1,
-          size: 15 + Math.random() * 25
-        });
-      }
-    }
-
-    function drawDecor() {
-      decor.forEach(d => {
-        if (d.type === 'rock') {
-          ctx.fillStyle = '#555';
-          ctx.beginPath();
-          ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = '#000';
-          ctx.fillStyle = '#444';
-          ctx.beginPath();
-          ctx.arc(d.x - d.size*0.2, d.y - d.size*0.2, d.size*0.6, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        } else if (d.type === 'plant') {
-          ctx.fillStyle = '#228B22';
-          ctx.beginPath();
-          ctx.moveTo(d.x, d.y);
-          ctx.lineTo(d.x - d.size*0.3, d.y - d.size*1.2);
-          ctx.lineTo(d.x + d.size*0.3, d.y - d.size*1.2);
-          ctx.closePath();
-          ctx.fill();
-          ctx.fillStyle = '#32CD32';
-          ctx.beginPath();
-          ctx.arc(d.x, d.y - d.size*1.4, d.size*0.5, 0, Math.PI * 2);
-          ctx.fill();
+        if (currentMode === 'straight') {
+          ctx.moveTo(rakePath[0].x, rakePath[0].y);
+          ctx.lineTo(rakePath[rakePath.length-1].x, rakePath[rakePath.length-1].y);
+        } else if (currentMode === 'wavy') {
+          ctx.moveTo(rakePath[0].x, rakePath[0].y);
+          for (let i = 1; i < rakePath.length; i++) {
+            const prev = rakePath[i-1];
+            const curr = rakePath[i];
+            const midX = (prev.x + curr.x) / 2;
+            const midY = (prev.y + curr.y) / 2 + Math.sin(i * 0.7) * 12;
+            ctx.quadraticCurveTo(midX, midY, curr.x, curr.y);
+          }
+        } else if (currentMode === 'circle') {
+          const centerX = rakePath.reduce((sum, p) => sum + p.x, 0) / rakePath.length;
+          const centerY = rakePath.reduce((sum, p) => sum + p.y, 0) / rakePath.length;
+          const radius = Math.hypot(rakePath[0].x - centerX, rakePath[0].y - centerY);
+          ctx.arc(centerX, centerY, radius * 0.8 + Math.sin(Date.now()*0.004)*10, 0, Math.PI*2);
         }
-      });
+
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      drawParticles();
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Input (rake drawing)
+    // Input
     // ────────────────────────────────────────────────────────────────────────
     function startRake(e) {
       e.preventDefault();
       isDrawing = true;
       const pos = getPos(e);
-      rakePath = [{ x: pos.x, y: pos.y }];
+      rakePath = [pos];
       addRipple(pos.x, pos.y);
+      playRakeSound();
     }
 
     function moveRake(e) {
       if (!isDrawing) return;
       e.preventDefault();
       const pos = getPos(e);
-      rakePath.push({ x: pos.x, y: pos.y });
+      rakePath.push(pos);
       addRipple(pos.x, pos.y);
+      playRakeSound();
       drawGarden();
     }
 
@@ -335,14 +329,50 @@
     function addRipple(x, y) {
       const col = Math.floor(x / cellSize);
       const row = Math.floor(y / cellSize);
-      if (sand[row] && sand[row][col]) {
+      if (sand[row]?.[col]) {
         sand[row][col].ripple = 1;
-        sand[row][col].rippleTime = performance.now();
       }
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Game Loop (time counter + ripple animation)
+    // Rake sound (low hum, pitch varies slightly with speed)
+    // ────────────────────────────────────────────────────────────────────────
+    let audioCtx = null;
+    let rakeOsc = null;
+    let rakeGain = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playRakeSound() {
+      initAudio();
+      if (!rakeOsc) {
+        rakeOsc = audioCtx.createOscillator();
+        rakeGain = audioCtx.createGain();
+        rakeOsc.connect(rakeGain);
+        rakeGain.connect(audioCtx.destination);
+        rakeOsc.type = 'sine';
+        rakeOsc.frequency.setValueAtTime(80, audioCtx.currentTime);
+        rakeGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        rakeOsc.start();
+      }
+      // Gentle volume & pitch variation
+      const vol = 0.08 + Math.random() * 0.06;
+      rakeGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.05);
+      rakeOsc.frequency.setTargetAtTime(75 + Math.random() * 20, audioCtx.currentTime, 0.08);
+    }
+
+    function stopRakeSound() {
+      if (rakeGain) {
+        rakeGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.12);
+      }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Game Loop
     // ────────────────────────────────────────────────────────────────────────
     let lastTime = 0;
     function loop(timestamp) {
@@ -353,16 +383,14 @@
       if (gameRunning && !paused) {
         const elapsed = Math.floor((timestamp - startTime - pausedTime) / 1000);
         timeEl.textContent = elapsed;
-      }
 
-      // Ripple decay
-      for (let y = 0; y < sand.length; y++) {
-        for (let x = 0; x < sand[y].length; x++) {
-          if (sand[y][x].ripple > 0) {
-            sand[y][x].ripple -= delta * 0.002;
-            if (sand[y][x].ripple < 0) sand[y][x].ripple = 0;
-          }
+        // Win condition: 5 minutes = 300 seconds
+        if (elapsed >= 300 && messageEl.style.display !== 'block') {
+          messageEl.style.display = 'block';
+          // Optional: add sparkle/confetti here later
         }
+
+        updateParticles(delta);
       }
 
       drawGarden();
@@ -370,7 +398,7 @@
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Controls & Events
+    // Controls
     // ────────────────────────────────────────────────────────────────────────
     canvas.addEventListener('mousedown', startRake);
     canvas.addEventListener('mousemove', moveRake);
@@ -382,10 +410,20 @@
     canvas.addEventListener('touchend', endRake);
     canvas.addEventListener('touchcancel', endRake);
 
+    // Rake mode buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+      });
+    });
+
     pauseBtn.addEventListener('click', () => {
       paused = !paused;
       if (paused) {
         pausedTime += performance.now() - startTime;
+        stopRakeSound();
       } else {
         startTime = performance.now() - pausedTime;
       }
@@ -393,11 +431,13 @@
 
     resetBtn.addEventListener('click', () => {
       rakePath = [];
-      placeDecor();
-      drawGarden();
+      initSand();
+      initParticles();
       startTime = performance.now();
       pausedTime = 0;
       paused = false;
+      messageEl.style.display = 'none';
+      drawGarden();
     });
 
     // Start on first interaction
@@ -406,7 +446,6 @@
         startTime = performance.now();
         pausedTime = 0;
         gameRunning = true;
-        placeDecor();
         drawGarden();
       }
     }, { once: true });
