@@ -314,6 +314,7 @@
 
     function endRake() {
       isDrawing = false;
+      stopRakeSound();
     }
 
     function getPos(e) {
@@ -387,7 +388,6 @@
         // Win condition: 5 minutes = 300 seconds
         if (elapsed >= 300 && messageEl.style.display !== 'block') {
           messageEl.style.display = 'block';
-          // Optional: add sparkle/confetti here later
         }
 
         updateParticles(delta);
