@@ -20,20 +20,19 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       position: relative;
       padding: 10px;
       box-sizing: border-box;
     }
     h1 {
       margin: 0.4em 0 0.2em;
-      font-size: clamp(1.8rem, 5vw, 2.5rem);
-      text-shadow: 0 0 10px #aaff00;
+      font-size: clamp(2rem, 6vw, 3rem);
+      text-shadow: 0 0 12px #aaff00;
     }
     #instructions {
-      margin: 0.3em 0 1em;
-      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
-      opacity: 0.85;
+      margin: 0.4em 0 1.2em;
+      font-size: clamp(1rem, 4vw, 1.3rem);
+      opacity: 0.9;
       text-align: center;
     }
     #canvas-wrapper {
@@ -42,143 +41,184 @@
       aspect-ratio: 1 / 1;
       margin: 0 auto;
       position: relative;
+      border-radius: 12px;
+      overflow: hidden;
     }
     canvas {
       width: 100%;
       height: 100%;
       display: block;
-      border: 3px solid #8B4513;
+      border: 4px solid #8B4513;
       border-radius: 12px;
-      box-shadow: 0 0 30px rgba(139,69,19,0.4);
+      box-shadow: 0 0 35px rgba(139,69,19,0.5);
       touch-action: none;
-      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="%23aaff00" stroke-width="4"/><line x1="8" y1="8" x2="24" y2="24" stroke="%23aaff00" stroke-width="6"/></svg>') 16 16, auto;
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="%23aaff00" stroke-width="5"/><line x1="9" y1="9" x2="27" y2="27" stroke="%23aaff00" stroke-width="7"/></svg>') 18 18, auto;
     }
     #ui {
-      width: 90%;
-      max-width: 600px;
+      width: 94%;
+      max-width: 640px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 1em;
-      font-size: clamp(1.1rem, 4vw, 1.4rem);
+      margin-top: 1.2em;
+      font-size: clamp(1.2rem, 4.5vw, 1.6rem);
     }
     #rake-mode {
       display: flex;
-      gap: 12px;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     .mode-btn {
-      padding: 6px 14px;
-      background: rgba(139,69,19,0.4);
-      border: 2px solid #8B4513;
-      color: #aaff00;
-      border-radius: 8px;
+      padding: 10px 20px;
+      background: rgba(139,69,19,0.45);
+      border: 3px solid #8B4513;
+      color: #ddff88;
+      border-radius: 12px;
       cursor: pointer;
-      font-size: 0.95rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      transition: all 0.18s;
+      min-width: 110px;
+      text-align: center;
+    }
+    .mode-btn:hover {
+      background: rgba(139,69,19,0.7);
+      border-color: #ddff88;
     }
     .mode-btn.active {
-      background: rgba(139,69,19,0.8);
+      background: rgba(170,255,0,0.28);
       border-color: #aaff00;
+      box-shadow: 0 0 18px #aaff00aa;
+      transform: scale(1.08);
     }
-    #pause-btn, #reset-btn {
-      width: 60px;
-      height: 60px;
+    #controls {
+      display: flex;
+      gap: 20px;
+    }
+    #pause-btn, #reset-btn, #pattern-btn {
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
-      background: rgba(139,69,19,0.3);
+      background: rgba(139,69,19,0.4);
       border: 3px solid #8B4513;
       color: #aaff00;
-      font-size: 1.6rem;
+      font-size: 1.9rem;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      z-index: 20;
+      transition: all 0.2s;
     }
-    #pause-btn { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
-    #reset-btn  { position: absolute; top: 20px; right: 20px; }
-
+    #pause-btn:hover, #reset-btn:hover, #pattern-btn:hover {
+      background: rgba(139,69,19,0.7);
+    }
+    #pattern-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.35;
+      transition: opacity 1.2s;
+    }
+    #pattern-overlay.active { opacity: 0.6; }
     #message {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.75);
-      padding: 2em 3em;
-      border: 3px solid #8B4513;
-      border-radius: 12px;
+      inset: 0;
+      margin: auto;
+      width: 80%;
+      max-width: 520px;
+      height: fit-content;
+      background: rgba(0,0,0,0.82);
+      padding: 2.5em 3em;
+      border: 4px solid #8B4513;
+      border-radius: 16px;
       text-align: center;
       color: #aaff00;
-      font-size: clamp(1.6rem, 6vw, 2.8rem);
-      text-shadow: 0 0 12px #aaff00;
+      font-size: clamp(2.2rem, 8vw, 3.6rem);
+      text-shadow: 0 0 15px #aaff00;
       display: none;
       z-index: 100;
       pointer-events: none;
     }
     #version {
       position: fixed;
-      bottom: 10px;
-      right: 14px;
-      font-size: 0.78rem;
-      color: #555;
-      opacity: 0.65;
+      bottom: 12px;
+      right: 16px;
+      font-size: 0.82rem;
+      color: #444;
+      opacity: 0.7;
     }
   </style>
 </head>
 <body>
   <div id="container">
     <h1>🪴 Zen Garden</h1>
-    <p id="instructions">Drag to rake • Change style with buttons</p>
+    <p id="instructions">Drag to rake sand • Choose style • Try tracing patterns</p>
+
     <div id="canvas-wrapper">
       <canvas id="garden"></canvas>
-      <div id="message">Garden in Harmony 🌿</div>
+      <canvas id="pattern-overlay"></canvas>
+      <div id="message">Garden in Perfect Harmony 🌿</div>
     </div>
+
     <div id="ui">
-      <div id="score">Time: <span id="time">0</span>s</div>
       <div id="rake-mode">
         <button class="mode-btn active" data-mode="straight">Straight</button>
         <button class="mode-btn" data-mode="wavy">Wavy</button>
         <button class="mode-btn" data-mode="circle">Circle</button>
       </div>
-    </div>
-    <button id="pause-btn">⏸️</button>
-    <button id="reset-btn">Reset</button>
-  </div>
 
-  <div id="version">v1.1 – Wind & Modes</div>
+      <div id="controls">
+        <button id="pattern-btn">🌀</button>
+        <button id="pause-btn">⏸</button>
+        <button id="reset-btn">↺</button>
+      </div>
+    </div>
+
+    <div id="version">v1.2 – Persistent lines + Patterns</div>
+  </div>
 
   <script>
     const canvas = document.getElementById('garden');
     const ctx = canvas.getContext('2d');
-    const timeEl = document.getElementById('time');
+    const patternCanvas = document.getElementById('pattern-overlay');
+    const pCtx = patternCanvas.getContext('2d');
     const messageEl = document.getElementById('message');
     const pauseBtn = document.getElementById('pause-btn');
     const resetBtn = document.getElementById('reset-btn');
+    const patternBtn = document.getElementById('pattern-btn');
 
     let width, height, cellSize;
     let sand = [];
-    let rakePath = [];
+    let rakePaths = [];           // ← changed: now array of paths (persistent)
+    let currentPath = [];
     let isDrawing = false;
+    let currentMode = 'straight';
+    let particles = [];
     let startTime = 0;
     let pausedTime = 0;
     let paused = false;
     let gameRunning = false;
-    let particles = [];
 
-    let currentMode = 'straight'; // straight | wavy | circle
+    // Pattern templates (drawn on overlay canvas)
+    const patterns = [
+      { name: "Concentric Circles", draw: drawConcentric },
+      { name: "Spiral", draw: drawSpiral },
+      { name: "Yin-Yang", draw: drawYinYang },
+      { name: "Wave Field", draw: drawWaveField }
+    ];
+    let currentPatternIndex = -1; // -1 = off
 
-    // ────────────────────────────────────────────────────────────────────────
-    // Init & Resize
-    // ────────────────────────────────────────────────────────────────────────
     function resize() {
       const wrapper = document.getElementById('canvas-wrapper');
       width = wrapper.clientWidth;
       height = wrapper.clientHeight;
-      canvas.width = width;
-      canvas.height = height;
-      cellSize = Math.min(width, height) / 40;
-
+      canvas.width = patternCanvas.width = width;
+      canvas.height = patternCanvas.height = height;
+      cellSize = Math.min(width, height) / 42;
       initSand();
       initParticles();
-      drawGarden();
+      drawEverything();
     }
 
     window.addEventListener('resize', resize);
@@ -188,116 +228,179 @@
       const cols = Math.floor(width / cellSize) + 2;
       const rows = Math.floor(height / cellSize) + 2;
       for (let y = 0; y < rows; y++) {
-        sand[y] = [];
-        for (let x = 0; x < cols; x++) {
-          sand[y][x] = { ripple: 0 };
-        }
+        sand[y] = Array(cols).fill().map(() => ({ ripple: 0 }));
       }
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // Gentle wind + sand particles
-    // ────────────────────────────────────────────────────────────────────────
     function initParticles() {
       particles = [];
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 70; i++) {
         particles.push({
           x: Math.random() * width,
           y: Math.random() * height,
-          size: 1 + Math.random() * 2.5,
-          speed: 0.2 + Math.random() * 0.6,
-          alpha: 0.3 + Math.random() * 0.4
+          size: 1 + Math.random() * 2.8,
+          speed: 0.15 + Math.random() * 0.5,
+          alpha: 0.25 + Math.random() * 0.45
         });
       }
     }
 
     function updateParticles(delta) {
       particles.forEach(p => {
-        p.x += p.speed * delta * 0.06; // gentle rightward wind
-        if (p.x > width) {
-          p.x = -p.size * 2;
+        p.x += p.speed * delta * 0.05;
+        if (p.x > width + 20) {
+          p.x = -20;
           p.y = Math.random() * height;
         }
       });
     }
 
-    function drawParticles() {
-      ctx.fillStyle = 'rgba(245,230,200,0.6)';
-      particles.forEach(p => {
-        ctx.globalAlpha = p.alpha;
-        ctx.fillRect(p.x, p.y, p.size, p.size * 0.2);
-      });
-      ctx.globalAlpha = 1;
+    // ─── Pattern drawing functions ────────────────────────────────────────
+    function drawConcentric(ctx) {
+      ctx.strokeStyle = 'rgba(180,140,100,0.7)';
+      ctx.lineWidth = 3;
+      const cx = width/2, cy = height/2;
+      for (let r = 40; r < Math.min(width,height)*0.45; r += 35) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI*2);
+        ctx.stroke();
+      }
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // Draw Garden
-    // ────────────────────────────────────────────────────────────────────────
-    function drawGarden() {
+    function drawSpiral(ctx) {
+      ctx.strokeStyle = 'rgba(180,140,100,0.65)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      let x = width/2, y = height/2;
+      let angle = 0, radius = 0;
+      ctx.moveTo(x, y);
+      while (radius < Math.max(width,height)) {
+        angle += 0.12;
+        radius += 1.8;
+        x = width/2 + Math.cos(angle) * radius;
+        y = height/2 + Math.sin(angle) * radius;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    function drawYinYang(ctx) {
+      const cx = width/2, cy = height/2;
+      const r = Math.min(width,height) * 0.38;
+      ctx.fillStyle = 'rgba(180,140,100,0.25)';
+      ctx.strokeStyle = 'rgba(180,140,100,0.8)';
+      ctx.lineWidth = 4;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy-r/2, r/2, Math.PI/2, Math.PI*3/2);
+      ctx.arc(cx, cy+r/2, r/2, -Math.PI/2, Math.PI/2, true);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawWaveField(ctx) {
+      ctx.strokeStyle = 'rgba(180,140,100,0.55)';
+      ctx.lineWidth = 2.5;
+      for (let y = 0; y < height; y += 45) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        for (let x = 0; x < width; x += 20) {
+          const amp = 18 * Math.sin(x*0.018 + y*0.009);
+          ctx.lineTo(x, y + amp);
+        }
+        ctx.stroke();
+      }
+    }
+
+    function drawPattern() {
+      pCtx.clearRect(0,0,width,height);
+      if (currentPatternIndex >= 0) {
+        const pat = patterns[currentPatternIndex];
+        pat.draw(pCtx);
+      }
+    }
+
+    // ─── Main drawing ──────────────────────────────────────────────────────
+    function drawEverything() {
       // Base sand
       ctx.fillStyle = '#f5e8c7';
       ctx.fillRect(0, 0, width, height);
 
-      // Sand ripples
-      ctx.strokeStyle = 'rgba(210,180,140,0.25)';
-      ctx.lineWidth = cellSize * 0.4;
+      // Ripples
+      ctx.strokeStyle = 'rgba(210,180,140,0.3)';
+      ctx.lineWidth = cellSize * 0.5;
       for (let y = 0; y < sand.length; y++) {
         for (let x = 0; x < sand[y].length; x++) {
           const s = sand[y][x];
-          if (s.ripple > 0) {
-            ctx.globalAlpha = s.ripple * 0.5;
+          if (s.ripple > 0.02) {
+            ctx.globalAlpha = s.ripple * 0.6;
             ctx.beginPath();
-            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 1.8, 0, Math.PI * 2);
+            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 2.2, 0, Math.PI*2);
             ctx.stroke();
-            s.ripple -= 0.015;
+            s.ripple *= 0.982; // slower decay
           }
         }
       }
       ctx.globalAlpha = 1;
 
-      // Rake lines
-      if (rakePath.length > 1) {
-        ctx.strokeStyle = '#d2b48c';
-        ctx.lineWidth = cellSize * 0.9;
-        ctx.lineCap = 'round';
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = 'rgba(0,0,0,0.35)';
-        ctx.beginPath();
+      // All previous rake paths (persistent!)
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
 
-        if (currentMode === 'straight') {
-          ctx.moveTo(rakePath[0].x, rakePath[0].y);
-          ctx.lineTo(rakePath[rakePath.length-1].x, rakePath[rakePath.length-1].y);
-        } else if (currentMode === 'wavy') {
-          ctx.moveTo(rakePath[0].x, rakePath[0].y);
-          for (let i = 1; i < rakePath.length; i++) {
-            const prev = rakePath[i-1];
-            const curr = rakePath[i];
+      rakePaths.forEach(path => {
+        if (path.length < 2) return;
+        ctx.strokeStyle = '#d2b48c';
+        ctx.lineWidth = cellSize * 1.1;
+
+        ctx.beginPath();
+        if (path.mode === 'straight') {
+          ctx.moveTo(path[0].x, path[0].y);
+          ctx.lineTo(path[path.length-1].x, path[path.length-1].y);
+        } else if (path.mode === 'wavy') {
+          ctx.moveTo(path[0].x, path[0].y);
+          for (let i = 1; i < path.length; i++) {
+            const prev = path[i-1];
+            const curr = path[i];
             const midX = (prev.x + curr.x) / 2;
-            const midY = (prev.y + curr.y) / 2 + Math.sin(i * 0.7) * 12;
+            const midY = (prev.y + curr.y) / 2 + Math.sin(i * 0.8) * 14;
             ctx.quadraticCurveTo(midX, midY, curr.x, curr.y);
           }
-        } else if (currentMode === 'circle') {
-          const centerX = rakePath.reduce((sum, p) => sum + p.x, 0) / rakePath.length;
-          const centerY = rakePath.reduce((sum, p) => sum + p.y, 0) / rakePath.length;
-          const radius = Math.hypot(rakePath[0].x - centerX, rakePath[0].y - centerY);
-          ctx.arc(centerX, centerY, radius * 0.8 + Math.sin(Date.now()*0.004)*10, 0, Math.PI*2);
+        } else if (path.mode === 'circle') {
+          const cx = path.reduce((s,p)=>s+p.x,0) / path.length;
+          const cy = path.reduce((s,p)=>s+p.y,0) / path.length;
+          const r = Math.hypot(path[0].x-cx, path[0].y-cy) * 0.82;
+          ctx.arc(cx, cy, r + Math.sin(Date.now()*0.003)*8, 0, Math.PI*2);
         }
-
         ctx.stroke();
-        ctx.shadowBlur = 0;
-      }
+      });
+
+      ctx.shadowBlur = 0;
 
       drawParticles();
+      drawPattern();
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // Input
-    // ────────────────────────────────────────────────────────────────────────
+    function drawParticles() {
+      ctx.fillStyle = 'rgba(245,230,200,0.65)';
+      particles.forEach(p => {
+        ctx.globalAlpha = p.alpha;
+        ctx.fillRect(p.x, p.y, p.size, p.size * 0.22);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    // ─── Input ─────────────────────────────────────────────────────────────
     function startRake(e) {
       e.preventDefault();
       isDrawing = true;
       const pos = getPos(e);
-      rakePath = [pos];
+      currentPath = [{x: pos.x, y: pos.y, mode: currentMode}];
       addRipple(pos.x, pos.y);
       playRakeSound();
     }
@@ -306,46 +409,41 @@
       if (!isDrawing) return;
       e.preventDefault();
       const pos = getPos(e);
-      rakePath.push(pos);
+      currentPath.push({x: pos.x, y: pos.y, mode: currentMode});
       addRipple(pos.x, pos.y);
       playRakeSound();
-      drawGarden();
+      drawEverything();
     }
 
     function endRake() {
+      if (isDrawing && currentPath.length > 3) {
+        rakePaths.push(currentPath);
+      }
+      currentPath = [];
       isDrawing = false;
       stopRakeSound();
     }
 
     function getPos(e) {
       const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
-      };
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      return {x, y};
     }
 
     function addRipple(x, y) {
       const col = Math.floor(x / cellSize);
       const row = Math.floor(y / cellSize);
       if (sand[row]?.[col]) {
-        sand[row][col].ripple = 1;
+        sand[row][col].ripple = 1.1;
       }
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // Rake sound (low hum, pitch varies slightly with speed)
-    // ────────────────────────────────────────────────────────────────────────
-    let audioCtx = null;
-    let rakeOsc = null;
-    let rakeGain = null;
+    // ─── Audio (rake sound) ────────────────────────────────────────────────
+    let audioCtx = null, rakeOsc = null, rakeGain = null;
 
     function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     function playRakeSound() {
@@ -356,67 +454,32 @@
         rakeOsc.connect(rakeGain);
         rakeGain.connect(audioCtx.destination);
         rakeOsc.type = 'sine';
-        rakeOsc.frequency.setValueAtTime(80, audioCtx.currentTime);
-        rakeGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        rakeOsc.frequency.value = 78;
+        rakeGain.gain.value = 0;
         rakeOsc.start();
       }
-      // Gentle volume & pitch variation
-      const vol = 0.08 + Math.random() * 0.06;
-      rakeGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.05);
-      rakeOsc.frequency.setTargetAtTime(75 + Math.random() * 20, audioCtx.currentTime, 0.08);
+      rakeGain.gain.setTargetAtTime(0.09 + Math.random()*0.07, audioCtx.currentTime, 0.04);
+      rakeOsc.frequency.setTargetAtTime(72 + Math.random()*24, audioCtx.currentTime, 0.07);
     }
 
     function stopRakeSound() {
-      if (rakeGain) {
-        rakeGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.12);
-      }
+      if (rakeGain) rakeGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.11);
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // Game Loop
-    // ────────────────────────────────────────────────────────────────────────
-    let lastTime = 0;
-    function loop(timestamp) {
-      if (!lastTime) lastTime = timestamp;
-      const delta = timestamp - lastTime;
-      lastTime = timestamp;
-
-      if (gameRunning && !paused) {
-        const elapsed = Math.floor((timestamp - startTime - pausedTime) / 1000);
-        timeEl.textContent = elapsed;
-
-        // Win condition: 5 minutes = 300 seconds
-        if (elapsed >= 300 && messageEl.style.display !== 'block') {
-          messageEl.style.display = 'block';
-        }
-
-        updateParticles(delta);
-      }
-
-      drawGarden();
-      requestAnimationFrame(loop);
-    }
-
-    // ────────────────────────────────────────────────────────────────────────
-    // Controls
-    // ────────────────────────────────────────────────────────────────────────
-    canvas.addEventListener('mousedown', startRake);
-    canvas.addEventListener('mousemove', moveRake);
-    canvas.addEventListener('mouseup', endRake);
-    canvas.addEventListener('mouseleave', endRake);
-
-    canvas.addEventListener('touchstart', startRake);
-    canvas.addEventListener('touchmove', moveRake);
-    canvas.addEventListener('touchend', endRake);
-    canvas.addEventListener('touchcancel', endRake);
-
-    // Rake mode buttons
+    // ─── Controls ──────────────────────────────────────────────────────────
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentMode = btn.dataset.mode;
       });
+    });
+
+    patternBtn.addEventListener('click', () => {
+      currentPatternIndex = (currentPatternIndex + 1) % (patterns.length + 1);
+      if (currentPatternIndex === patterns.length) currentPatternIndex = -1;
+      patternCanvas.classList.toggle('active', currentPatternIndex >= 0);
+      drawEverything();
     });
 
     pauseBtn.addEventListener('click', () => {
@@ -430,27 +493,56 @@
     });
 
     resetBtn.addEventListener('click', () => {
-      rakePath = [];
+      rakePaths = [];
+      currentPath = [];
       initSand();
       initParticles();
       startTime = performance.now();
       pausedTime = 0;
       paused = false;
       messageEl.style.display = 'none';
-      drawGarden();
+      currentPatternIndex = -1;
+      patternCanvas.classList.remove('active');
+      drawEverything();
     });
 
-    // Start on first interaction
+    // Start timer on first touch/click
     document.addEventListener('click', () => {
       if (!gameRunning) {
         startTime = performance.now();
-        pausedTime = 0;
         gameRunning = true;
-        drawGarden();
       }
     }, { once: true });
 
-    // Kick off
+    // ─── Game loop ─────────────────────────────────────────────────────────
+    let lastTime = 0;
+    function loop(ts) {
+      if (!lastTime) lastTime = ts;
+      const delta = ts - lastTime;
+      lastTime = ts;
+
+      if (gameRunning && !paused) {
+        const elapsed = Math.floor((ts - startTime - pausedTime) / 1000);
+        if (elapsed >= 300 && messageEl.style.display !== 'block') {
+          messageEl.style.display = 'block';
+        }
+        updateParticles(delta);
+      }
+
+      drawEverything();
+      requestAnimationFrame(loop);
+    }
+
+    // Events
+    canvas.addEventListener('mousedown', startRake);
+    canvas.addEventListener('mousemove', moveRake);
+    canvas.addEventListener('mouseup', endRake);
+    canvas.addEventListener('mouseleave', endRake);
+    canvas.addEventListener('touchstart', startRake);
+    canvas.addEventListener('touchmove', moveRake);
+    canvas.addEventListener('touchend', endRake);
+    canvas.addEventListener('touchcancel', endRake);
+
     resize();
     requestAnimationFrame(loop);
   </script>
