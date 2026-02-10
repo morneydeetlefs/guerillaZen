@@ -20,6 +20,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       position: relative;
       padding: 10px;
       box-sizing: border-box;
@@ -37,12 +38,13 @@
     }
     #canvas-wrapper {
       width: 100%;
-      max-width: 90vmin;
-      aspect-ratio: 1 / 1;
+      max-width: 90vmin;           /* Limits both dimensions */
+      aspect-ratio: 1 / 1;         /* Forces square shape */
       margin: 0 auto;
       position: relative;
       border-radius: 12px;
       overflow: hidden;
+      box-shadow: 0 0 35px rgba(139,69,19,0.5);
     }
     canvas {
       width: 100%;
@@ -50,7 +52,6 @@
       display: block;
       border: 4px solid #8B4513;
       border-radius: 12px;
-      box-shadow: 0 0 35px rgba(139,69,19,0.5);
       touch-action: none;
       cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="%23aaff00" stroke-width="5"/><line x1="9" y1="9" x2="27" y2="27" stroke="%23aaff00" stroke-width="7"/></svg>') 18 18, auto;
     }
@@ -154,31 +155,28 @@
   <div id="container">
     <h1>🪴 Zen Garden</h1>
     <p id="instructions">Drag to rake sand • Choose style • Try tracing patterns</p>
-
     <div id="canvas-wrapper">
       <canvas id="garden"></canvas>
       <canvas id="pattern-overlay"></canvas>
       <div id="message">Garden in Perfect Harmony 🌿</div>
     </div>
-
     <div id="ui">
       <div id="rake-mode">
         <button class="mode-btn active" data-mode="straight">Straight</button>
         <button class="mode-btn" data-mode="wavy">Wavy</button>
         <button class="mode-btn" data-mode="circle">Circle</button>
       </div>
-
       <div id="controls">
         <button id="pattern-btn">🌀</button>
         <button id="pause-btn">⏸</button>
         <button id="reset-btn">↺</button>
       </div>
     </div>
-
-    <div id="version">v1.2 – Persistent lines + Patterns</div>
+    <div id="version">v1.2.1 – Fixed spawn + better visibility</div>
   </div>
 
   <script>
+    // ── DOM Elements ───────────────────────────────────────────────────────
     const canvas = document.getElementById('garden');
     const ctx = canvas.getContext('2d');
     const patternCanvas = document.getElementById('pattern-overlay');
@@ -188,9 +186,10 @@
     const resetBtn = document.getElementById('reset-btn');
     const patternBtn = document.getElementById('pattern-btn');
 
+    // ── Game State ─────────────────────────────────────────────────────────
     let width, height, cellSize;
     let sand = [];
-    let rakePaths = [];           // ← changed: now array of paths (persistent)
+    let rakePaths = [];              // Persistent rake lines
     let currentPath = [];
     let isDrawing = false;
     let currentMode = 'straight';
@@ -200,7 +199,7 @@
     let paused = false;
     let gameRunning = false;
 
-    // Pattern templates (drawn on overlay canvas)
+    // Pattern templates
     const patterns = [
       { name: "Concentric Circles", draw: drawConcentric },
       { name: "Spiral", draw: drawSpiral },
@@ -209,6 +208,7 @@
     ];
     let currentPatternIndex = -1; // -1 = off
 
+    // ── Resize & Initialize ────────────────────────────────────────────────
     function resize() {
       const wrapper = document.getElementById('canvas-wrapper');
       width = wrapper.clientWidth;
@@ -220,7 +220,6 @@
       initParticles();
       drawEverything();
     }
-
     window.addEventListener('resize', resize);
 
     function initSand() {
@@ -243,16 +242,6 @@
           alpha: 0.25 + Math.random() * 0.45
         });
       }
-    }
-
-    function updateParticles(delta) {
-      particles.forEach(p => {
-        p.x += p.speed * delta * 0.05;
-        if (p.x > width + 20) {
-          p.x = -20;
-          p.y = Math.random() * height;
-        }
-      });
     }
 
     // ─── Pattern drawing functions ────────────────────────────────────────
@@ -290,11 +279,9 @@
       ctx.fillStyle = 'rgba(180,140,100,0.25)';
       ctx.strokeStyle = 'rgba(180,140,100,0.8)';
       ctx.lineWidth = 4;
-
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI*2);
       ctx.stroke();
-
       ctx.beginPath();
       ctx.arc(cx, cy-r/2, r/2, Math.PI/2, Math.PI*3/2);
       ctx.arc(cx, cy+r/2, r/2, -Math.PI/2, Math.PI/2, true);
@@ -330,56 +317,52 @@
       ctx.fillStyle = '#f5e8c7';
       ctx.fillRect(0, 0, width, height);
 
-      // Ripples
-      ctx.strokeStyle = 'rgba(210,180,140,0.3)';
-      ctx.lineWidth = cellSize * 0.5;
+      // Ripples – made more visible
+      ctx.strokeStyle = 'rgba(210,180,140,0.45)';
+      ctx.lineWidth = cellSize * 0.7;
       for (let y = 0; y < sand.length; y++) {
         for (let x = 0; x < sand[y].length; x++) {
           const s = sand[y][x];
           if (s.ripple > 0.02) {
-            ctx.globalAlpha = s.ripple * 0.6;
+            ctx.globalAlpha = s.ripple * 0.75;
             ctx.beginPath();
-            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 2.2, 0, Math.PI*2);
+            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 2.8, 0, Math.PI*2);
             ctx.stroke();
-            s.ripple *= 0.982; // slower decay
+            s.ripple *= 0.978; // slower fade
           }
         }
       }
       ctx.globalAlpha = 1;
 
-      // All previous rake paths (persistent!)
+      // Persistent rake paths
       ctx.shadowBlur = 6;
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-
       rakePaths.forEach(path => {
         if (path.length < 2) return;
         ctx.strokeStyle = '#d2b48c';
         ctx.lineWidth = cellSize * 1.1;
-
         ctx.beginPath();
-        if (path.mode === 'straight') {
-          ctx.moveTo(path[0].x, path[0].y);
-          ctx.lineTo(path[path.length-1].x, path[path.length-1].y);
-        } else if (path.mode === 'wavy') {
-          ctx.moveTo(path[0].x, path[0].y);
-          for (let i = 1; i < path.length; i++) {
-            const prev = path[i-1];
-            const curr = path[i];
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) {
+          const prev = path[i-1];
+          const curr = path[i];
+          if (path.mode === 'straight') {
+            ctx.lineTo(curr.x, curr.y);
+          } else if (path.mode === 'wavy') {
             const midX = (prev.x + curr.x) / 2;
             const midY = (prev.y + curr.y) / 2 + Math.sin(i * 0.8) * 14;
             ctx.quadraticCurveTo(midX, midY, curr.x, curr.y);
+          } else if (path.mode === 'circle') {
+            const cx = path.reduce((s,p)=>s+p.x,0) / path.length;
+            const cy = path.reduce((s,p)=>s+p.y,0) / path.length;
+            const r = Math.hypot(path[0].x-cx, path[0].y-cy) * 0.82;
+            ctx.arc(cx, cy, r + Math.sin(Date.now()*0.003)*8, 0, Math.PI*2);
           }
-        } else if (path.mode === 'circle') {
-          const cx = path.reduce((s,p)=>s+p.x,0) / path.length;
-          const cy = path.reduce((s,p)=>s+p.y,0) / path.length;
-          const r = Math.hypot(path[0].x-cx, path[0].y-cy) * 0.82;
-          ctx.arc(cx, cy, r + Math.sin(Date.now()*0.003)*8, 0, Math.PI*2);
         }
         ctx.stroke();
       });
-
       ctx.shadowBlur = 0;
 
       drawParticles();
@@ -393,6 +376,16 @@
         ctx.fillRect(p.x, p.y, p.size, p.size * 0.22);
       });
       ctx.globalAlpha = 1;
+    }
+
+    function updateParticles(delta) {
+      particles.forEach(p => {
+        p.x += p.speed * delta * 0.05;
+        if (p.x > width + 20) {
+          p.x = -20;
+          p.y = Math.random() * height;
+        }
+      });
     }
 
     // ─── Input ─────────────────────────────────────────────────────────────
@@ -435,7 +428,7 @@
       const col = Math.floor(x / cellSize);
       const row = Math.floor(y / cellSize);
       if (sand[row]?.[col]) {
-        sand[row][col].ripple = 1.1;
+        sand[row][col].ripple = 1.2; // stronger initial ripple
       }
     }
 
@@ -506,7 +499,7 @@
       drawEverything();
     });
 
-    // Start timer on first touch/click
+    // Start timer on first interaction
     document.addEventListener('click', () => {
       if (!gameRunning) {
         startTime = performance.now();
@@ -533,11 +526,12 @@
       requestAnimationFrame(loop);
     }
 
-    // Events
+    // ─── Event Listeners ───────────────────────────────────────────────────
     canvas.addEventListener('mousedown', startRake);
     canvas.addEventListener('mousemove', moveRake);
     canvas.addEventListener('mouseup', endRake);
     canvas.addEventListener('mouseleave', endRake);
+
     canvas.addEventListener('touchstart', startRake);
     canvas.addEventListener('touchmove', moveRake);
     canvas.addEventListener('touchend', endRake);
