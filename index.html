@@ -39,8 +39,8 @@
     }
     #canvas-wrapper {
       width: 100%;
-      max-width: 90vmin;           /* Limits both dimensions */
-      aspect-ratio: 1 / 1;         /* Forces square shape */
+      max-width: 90vmin;
+      aspect-ratio: 1 / 1;
       margin: 0 auto;
       position: relative;
       border-radius: 12px;
@@ -173,7 +173,7 @@
         <button id="reset-btn">↺</button>
       </div>
     </div>
-    <div id="version">v1.2.1 – Fixed spawn + better visibility</div>
+    <div id="version">v1.2.1 – Fixed drawing + sound</div>
   </div>
 
   <script>
@@ -208,6 +208,15 @@
       { name: "Wave Field", draw: drawWaveField }
     ];
     let currentPatternIndex = -1; // -1 = off
+
+    // ── Audio Context (will resume on user interaction) ─────────────────────
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
 
     // ── Resize & Initialize ────────────────────────────────────────────────
     function resize() {
@@ -314,28 +323,11 @@
 
     // ─── Main drawing ──────────────────────────────────────────────────────
     function drawEverything() {
-      // Base sand
+      // Base sand color
       ctx.fillStyle = '#f5e8c7';
       ctx.fillRect(0, 0, width, height);
 
-      // Ripples – made more visible
-      ctx.strokeStyle = 'rgba(210,180,140,0.45)';
-      ctx.lineWidth = cellSize * 0.7;
-      for (let y = 0; y < sand.length; y++) {
-        for (let x = 0; x < sand[y].length; x++) {
-          const s = sand[y][x];
-          if (s.ripple > 0.02) {
-            ctx.globalAlpha = s.ripple * 0.75;
-            ctx.beginPath();
-            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 2.8, 0, Math.PI*2);
-            ctx.stroke();
-            s.ripple *= 0.978; // slower fade
-          }
-        }
-      }
-      ctx.globalAlpha = 1;
-
-      // Persistent rake paths
+      // Draw persistent rake paths
       ctx.shadowBlur = 6;
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
       ctx.lineCap = 'round';
@@ -366,6 +358,53 @@
       });
       ctx.shadowBlur = 0;
 
+      // Draw current in-progress path
+      if (currentPath.length >= 2) {
+        ctx.strokeStyle = '#d2b48c';
+        ctx.lineWidth = cellSize * 1.1;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.moveTo(currentPath[0].x, currentPath[0].y);
+        for (let i = 1; i < currentPath.length; i++) {
+          const prev = currentPath[i-1];
+          const curr = currentPath[i];
+          if (currentMode === 'straight') {
+            ctx.lineTo(curr.x, curr.y);
+          } else if (currentMode === 'wavy') {
+            const midX = (prev.x + curr.x) / 2;
+            const midY = (prev.y + curr.y) / 2 + Math.sin(i * 0.8) * 14;
+            ctx.quadraticCurveTo(midX, midY, curr.x, curr.y);
+          } else if (currentMode === 'circle') {
+            const cx = currentPath.reduce((s,p)=>s+p.x,0) / currentPath.length;
+            const cy = currentPath.reduce((s,p)=>s+p.y,0) / currentPath.length;
+            const r = Math.hypot(currentPath[0].x-cx, currentPath[0].y-cy) * 0.82;
+            ctx.arc(cx, cy, r + Math.sin(Date.now()*0.003)*8, 0, Math.PI*2);
+          }
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw ripples (more visible)
+      ctx.strokeStyle = 'rgba(210,180,140,0.55)';
+      ctx.lineWidth = cellSize * 0.7;
+      for (let y = 0; y < sand.length; y++) {
+        for (let x = 0; x < sand[y].length; x++) {
+          const s = sand[y][x];
+          if (s.ripple > 0.02) {
+            ctx.globalAlpha = s.ripple * 0.85;
+            ctx.beginPath();
+            ctx.arc(x * cellSize, y * cellSize, cellSize * s.ripple * 3.0, 0, Math.PI*2);
+            ctx.stroke();
+            s.ripple *= 0.975; // slightly slower fade
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+
       drawParticles();
       drawPattern();
     }
@@ -392,11 +431,13 @@
     // ─── Input ─────────────────────────────────────────────────────────────
     function startRake(e) {
       e.preventDefault();
+      initAudio(); // resume audio context on first touch
       isDrawing = true;
       const pos = getPos(e);
       currentPath = [{x: pos.x, y: pos.y, mode: currentMode}];
       addRipple(pos.x, pos.y);
       playRakeSound();
+      drawEverything();
     }
 
     function moveRake(e) {
@@ -416,6 +457,7 @@
       currentPath = [];
       isDrawing = false;
       stopRakeSound();
+      drawEverything();
     }
 
     function getPos(e) {
@@ -428,20 +470,17 @@
     function addRipple(x, y) {
       const col = Math.floor(x / cellSize);
       const row = Math.floor(y / cellSize);
-      if (sand[row]?.[col]) {
-        sand[row][col].ripple = 1.2; // stronger initial ripple
+      if (sand[row] && sand[row][col]) {
+        sand[row][col].ripple = 1.3; // stronger initial ripple
       }
     }
 
-    // ─── Audio (rake sound) ────────────────────────────────────────────────
-    let audioCtx = null, rakeOsc = null, rakeGain = null;
-
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    // ─── Audio ─────────────────────────────────────────────────────────────
+    let rakeOsc = null;
+    let rakeGain = null;
 
     function playRakeSound() {
-      initAudio();
+      if (!audioCtx) return;
       if (!rakeOsc) {
         rakeOsc = audioCtx.createOscillator();
         rakeGain = audioCtx.createGain();
@@ -452,12 +491,14 @@
         rakeGain.gain.value = 0;
         rakeOsc.start();
       }
-      rakeGain.gain.setTargetAtTime(0.09 + Math.random()*0.07, audioCtx.currentTime, 0.04);
-      rakeOsc.frequency.setTargetAtTime(72 + Math.random()*24, audioCtx.currentTime, 0.07);
+      rakeGain.gain.setTargetAtTime(0.12 + Math.random()*0.08, audioCtx.currentTime, 0.03);
+      rakeOsc.frequency.setTargetAtTime(70 + Math.random()*30, audioCtx.currentTime, 0.06);
     }
 
     function stopRakeSound() {
-      if (rakeGain) rakeGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.11);
+      if (rakeGain) {
+        rakeGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.08);
+      }
     }
 
     // ─── Controls ──────────────────────────────────────────────────────────
@@ -538,9 +579,15 @@
     canvas.addEventListener('touchend', endRake);
     canvas.addEventListener('touchcancel', endRake);
 
+    // Important: resume audio context on first user interaction
+    document.addEventListener('click', () => {
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }, { once: true });
+
     resize();
     requestAnimationFrame(loop);
   </script>
 </body>
 </html>
-
