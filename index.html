@@ -168,7 +168,7 @@
 <body>
   <div id="container">
     <h1>🪴 Zen Garden</h1>
-    <p id="instructions">Drag to rake sand • Lines stay forever • Match the pattern</p>
+    <p id="instructions">Drag to rake sand • All lines stay forever • Match the pattern</p>
     <div id="timer">Time: <span id="time-display">5:00</span></div>
     <div id="canvas-wrapper">
       <canvas id="garden"></canvas>
@@ -187,7 +187,7 @@
         <button id="reset-btn">↺</button>
       </div>
     </div>
-    <div id="version">v1.2.4 – Persistent lines + pattern score</div>
+    <div id="version">v1.2.4 – Lines now stay forever</div>
   </div>
 
   <script>
@@ -206,7 +206,7 @@
     // ── Game State ─────────────────────────────────────────────────────────
     let width, height, cellSize;
     let sand = [];
-    let rakePaths = [];              // All completed strokes stay here forever
+    let rakePaths = [];              // All completed strokes — stay forever
     let currentPath = [];            // Current stroke being drawn
     let isDrawing = false;
     let currentMode = 'straight';
@@ -348,7 +348,7 @@
       ctx.fillStyle = '#f5e8c7';
       ctx.fillRect(0, 0, width, height);
 
-      // Draw ALL persistent rake paths
+      // Draw ALL saved rake paths (persistent forever)
       ctx.shadowBlur = 6;
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
       ctx.lineCap = 'round';
@@ -380,7 +380,7 @@
       });
       ctx.shadowBlur = 0;
 
-      // Draw current path being drawn
+      // Draw current stroke being drawn (live preview)
       if (currentPath.length >= 2) {
         ctx.strokeStyle = '#d2b48c';
         ctx.lineWidth = cellSize * 1.1;
@@ -411,7 +411,7 @@
         ctx.shadowBlur = 0;
       }
 
-      // Ripples
+      // Draw ripples
       ctx.strokeStyle = 'rgba(210,180,140,0.55)';
       ctx.lineWidth = cellSize * 0.7;
       for (let y = 0; y < sand.length; y++) {
@@ -463,7 +463,7 @@
         gameRunning = false;
         gameOver = true;
         const matchScore = currentPatternIndex >= 0 ? calculateMatchScore() : 0;
-        const finalText = `Time's up!\nPattern match: ${matchScore}%\n\nGarden preserved forever 🌿`;
+        const finalText = `Time's up!\nPattern match: ${matchScore}%\n\nYour garden is preserved 🌿`;
         messageEl.innerHTML = finalText.replace(/\n/g, '<br>');
         messageEl.style.display = 'block';
         return;
