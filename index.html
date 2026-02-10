@@ -168,7 +168,7 @@
 <body>
   <div id="container">
     <h1>🪴 Zen Garden</h1>
-    <p id="instructions">Drag to rake sand • Choose style • Try matching patterns</p>
+    <p id="instructions">Drag to rake sand • Lines stay forever • Match the pattern</p>
     <div id="timer">Time: <span id="time-display">5:00</span></div>
     <div id="canvas-wrapper">
       <canvas id="garden"></canvas>
@@ -187,7 +187,7 @@
         <button id="reset-btn">↺</button>
       </div>
     </div>
-    <div id="version">v1.2.3 – Persistent lines + Pattern matching score</div>
+    <div id="version">v1.2.4 – Persistent lines + pattern score</div>
   </div>
 
   <script>
@@ -206,8 +206,8 @@
     // ── Game State ─────────────────────────────────────────────────────────
     let width, height, cellSize;
     let sand = [];
-    let rakePaths = [];              // All lines stay visible until reset
-    let currentPath = [];
+    let rakePaths = [];              // All completed strokes stay here forever
+    let currentPath = [];            // Current stroke being drawn
     let isDrawing = false;
     let currentMode = 'straight';
     let particles = [];
@@ -215,9 +215,9 @@
     let pausedTime = 0;
     let paused = false;
     let gameRunning = false;
-    let gameOver = false; 
+    let gameOver = false;
 
-    const GAME_DURATION = 300; // 5 minutes in seconds
+    const GAME_DURATION = 300; // 5 minutes
 
     // Pattern templates
     const patterns = [
@@ -226,7 +226,7 @@
       { name: "Yin-Yang", draw: drawYinYang },
       { name: "Wave Field", draw: drawWaveField }
     ];
-    let currentPatternIndex = -1; // -1 = no pattern active
+    let currentPatternIndex = -1;
 
     // ── Audio Context ──────────────────────────────────────────────────────
     let audioCtx = null;
@@ -348,7 +348,7 @@
       ctx.fillStyle = '#f5e8c7';
       ctx.fillRect(0, 0, width, height);
 
-      // Persistent rake lines
+      // Draw ALL persistent rake paths
       ctx.shadowBlur = 6;
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
       ctx.lineCap = 'round';
@@ -380,7 +380,7 @@
       });
       ctx.shadowBlur = 0;
 
-      // Current path (live drawing)
+      // Draw current path being drawn
       if (currentPath.length >= 2) {
         ctx.strokeStyle = '#d2b48c';
         ctx.lineWidth = cellSize * 1.1;
@@ -452,31 +452,45 @@
       });
     }
 
-    // ─── Pattern Matching Score ────────────────────────────────────────────
+    // ─── Timer & End-game Scoring ──────────────────────────────────────────
+    function updateTimer() {
+      if (!gameRunning || paused || gameOver) return;
+
+      const elapsed = Math.floor((performance.now() - startTime - pausedTime) / 1000);
+      const remaining = GAME_DURATION - elapsed;
+
+      if (remaining <= 0) {
+        gameRunning = false;
+        gameOver = true;
+        const matchScore = currentPatternIndex >= 0 ? calculateMatchScore() : 0;
+        const finalText = `Time's up!\nPattern match: ${matchScore}%\n\nGarden preserved forever 🌿`;
+        messageEl.innerHTML = finalText.replace(/\n/g, '<br>');
+        messageEl.style.display = 'block';
+        return;
+      }
+
+      const mins = Math.floor(remaining / 60);
+      const secs = String(remaining % 60).padStart(2, '0');
+      timeDisplay.textContent = `${mins}:${secs}`;
+    }
+
     function calculateMatchScore() {
       if (currentPatternIndex < 0) return 0;
 
-      // Simple pixel comparison between rake canvas and pattern overlay
       const rakeData = ctx.getImageData(0, 0, width, height).data;
       const patternData = pCtx.getImageData(0, 0, width, height).data;
 
       let matchCount = 0;
-      let totalRelevantPixels = 0;
+      let totalRelevant = 0;
 
-      for (let i = 0; i < rakeData.length; i += 4) {
-        // Check if pattern has ink at this pixel
-        if (patternData[i + 3] > 80) { // alpha threshold
-          totalRelevantPixels++;
-          // Check if rake has similar color/ink
-          if (rakeData[i + 3] > 80) {
-            matchCount++;
-          }
+      for (let i = 3; i < rakeData.length; i += 4) {
+        if (patternData[i] > 80) {
+          totalRelevant++;
+          if (rakeData[i] > 80) matchCount++;
         }
       }
 
-      return totalRelevantPixels > 0 
-        ? Math.round((matchCount / totalRelevantPixels) * 100)
-        : 0;
+      return totalRelevant > 0 ? Math.round((matchCount / totalRelevant) * 100) : 0;
     }
 
     // ─── Input ─────────────────────────────────────────────────────────────
@@ -503,7 +517,7 @@
 
     function endRake() {
       if (isDrawing && currentPath.length > 3) {
-        rakePaths.push(currentPath);
+        rakePaths.push(currentPath); // ← Save completed stroke permanently
       }
       currentPath = [];
       isDrawing = false;
@@ -602,8 +616,9 @@
 
       if (remaining <= 0) {
         gameRunning = false;
+        gameOver = true;
         const matchScore = currentPatternIndex >= 0 ? calculateMatchScore() : 0;
-        const finalText = `Garden Complete!\nTime's up\nPattern match: ${matchScore}%`;
+        const finalText = `Time's up!\nPattern match: ${matchScore}%\n\nYour garden is preserved 🌿`;
         messageEl.innerHTML = finalText.replace(/\n/g, '<br>');
         messageEl.style.display = 'block';
         return;
@@ -623,7 +638,7 @@
       let matchCount = 0;
       let totalRelevant = 0;
 
-      for (let i = 3; i < rakeData.length; i += 4) { // check alpha channel
+      for (let i = 3; i < rakeData.length; i += 4) {
         if (patternData[i] > 80) {
           totalRelevant++;
           if (rakeData[i] > 80) matchCount++;
@@ -676,4 +691,3 @@
   </script>
 </body>
 </html>
-
